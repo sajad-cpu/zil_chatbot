@@ -1,0 +1,19 @@
+Acme Robotics — Internal Knowledge Base (Sample)
+
+Company Overview
+Acme Robotics was founded in 2014 by Dr. Lina Park and Marcus Reyes. The company designs autonomous warehouse robots and is headquartered in Austin, Texas. As of 2025, Acme employs 320 people across three offices: Austin, Berlin, and Singapore.
+
+Products
+The flagship product is the Acme Picker R3, an autonomous mobile robot used for order picking in warehouses. It has a payload capacity of 25 kg, a top speed of 1.8 meters per second, and an average battery life of 9 hours per charge. The R3 uses LiDAR plus stereo cameras for navigation. A smaller variant, the Picker R3-Mini, supports a 10 kg payload and is designed for narrow aisles.
+
+Pricing
+The Picker R3 starts at $24,500 per unit with volume discounts available for orders over 10 units. The R3-Mini starts at $14,000. All units include a 24-month warranty and the first year of software updates.
+
+Support
+Customer support is available 24/7 via support@acme-robotics.example. Phone support runs from 8am to 8pm Central Time on weekdays. The standard SLA for critical issues is a 2-hour response time.
+
+Software
+All Acme robots run AcmeOS, a Linux-based real-time operating system. AcmeOS receives quarterly feature updates and monthly security patches. Customers on the Premium plan get early access to beta features.
+
+Return Policy
+Hardware returns are accepted within 30 days of delivery in the original packaging. After 30 days, returns are evaluated case-by-case. Software subscriptions are non-refundable but can be cancelled at any time to prevent renewal.
