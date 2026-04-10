@@ -87,7 +87,7 @@ def _build_prompt(question: str, context_chunks: List[dict], history: List[Histo
 @router.post("", response_model=ChatResponse)
 async def chat(
     req: ChatRequest,
-    user_id: Annotated[str, Depends(get_current_user)],
+    user_id: str = Depends(get_current_user),
 ) -> ChatResponse:
     message = req.message.strip()
     if not message:
