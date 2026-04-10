@@ -6,15 +6,18 @@ Flow:
     3. Construct a strict, grounded prompt
     4. Call Gemini to generate the answer
     5. Return answer + the chunks used as evidence
+    6. Save messages to database
 """
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from auth.deps import get_current_user
+from db.pool import get_pool
 from services.gemini import embed_text, generate_answer
 from vector_db import store
 
@@ -32,6 +35,7 @@ class HistoryItem(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
+    conversation_id: str = Field(..., min_length=1)
     history: Optional[List[HistoryItem]] = None
 
 
@@ -81,20 +85,46 @@ def _build_prompt(question: str, context_chunks: List[dict], history: List[Histo
 
 
 @router.post("", response_model=ChatResponse)
-async def chat(req: ChatRequest) -> ChatResponse:
+async def chat(
+    req: ChatRequest,
+    user_id: Annotated[str, Depends(get_current_user)],
+) -> ChatResponse:
     message = req.message.strip()
     if not message:
         raise HTTPException(status_code=400, detail="'message' must be non-empty")
 
+    pool = await get_pool()
+
+    # Save user message to DB
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO messages (conversation_id, user_id, role, content)
+            VALUES ($1, $2, 'user', $3)
+            """,
+            req.conversation_id,
+            user_id,
+            message,
+        )
+
     # Empty store → graceful response (no API call needed).
     if await store.count() == 0:
-        return ChatResponse(
-            answer=(
-                "I don't know — no knowledge has been added yet. "
-                "Use the Teach tab to train me first."
-            ),
-            sources=[],
+        answer = (
+            "I don't know — no knowledge has been added yet. "
+            "Use the Teach tab to train me first."
         )
+        # Save assistant message to DB
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                INSERT INTO messages (conversation_id, user_id, role, content)
+                VALUES ($1, $2, 'assistant', $3)
+                """,
+                req.conversation_id,
+                user_id,
+                answer,
+            )
+        return ChatResponse(answer=answer, sources=[])
 
     # 1. Embed the query
     try:
@@ -108,7 +138,19 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
     # If nothing crosses the relevance bar, short-circuit before calling the LLM.
     if not relevant:
-        return ChatResponse(answer="I don't know", sources=[])
+        answer = "I don't know"
+        # Save assistant message to DB
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                INSERT INTO messages (conversation_id, user_id, role, content)
+                VALUES ($1, $2, 'assistant', $3)
+                """,
+                req.conversation_id,
+                user_id,
+                answer,
+            )
+        return ChatResponse(answer=answer, sources=[])
 
     # 3. Build grounded prompt
     prompt = _build_prompt(message, relevant, req.history or [])
@@ -118,6 +160,18 @@ async def chat(req: ChatRequest) -> ChatResponse:
         answer = await generate_answer(prompt)
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    # Save assistant message to DB
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO messages (conversation_id, user_id, role, content)
+            VALUES ($1, $2, 'assistant', $3)
+            """,
+            req.conversation_id,
+            user_id,
+            answer,
+        )
 
     return ChatResponse(
         answer=answer,

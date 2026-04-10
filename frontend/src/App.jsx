@@ -1,11 +1,39 @@
 import { useEffect, useState } from "react";
 import Chat from "./components/Chat.jsx";
 import Teach from "./components/Teach.jsx";
-import { getStats } from "./api.js";
+import AuthPage from "./components/AuthPage.jsx";
+import { getStats, getCurrentUser } from "./api.js";
 
 export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [activeTab, setActiveTab] = useState("chat");
   const [stats, setStats] = useState({ totalChunks: 0 });
+
+  // Validate stored token on mount
+  useEffect(() => {
+    async function validateToken() {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        setIsLoggedIn(false);
+        setIsCheckingAuth(false);
+        return;
+      }
+
+      try {
+        await getCurrentUser();
+        setIsLoggedIn(true);
+      } catch {
+        // Token is invalid, clear it
+        localStorage.removeItem("auth_token");
+        setIsLoggedIn(false);
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    }
+
+    validateToken();
+  }, []);
 
   async function refreshStats() {
     try {
@@ -16,15 +44,31 @@ export default function App() {
     }
   }
 
-  useEffect(() => {
+  async function handleAuthSuccess() {
+    setIsLoggedIn(true);
+    setActiveTab("chat");
     refreshStats();
-  }, []);
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("auth_token");
+    setIsLoggedIn(false);
+    setActiveTab("chat");
+  }
+
+  if (isCheckingAuth) {
+    return <div className="app loading-auth">Loading...</div>;
+  }
+
+  if (!isLoggedIn) {
+    return <AuthPage onAuthSuccess={handleAuthSuccess} />;
+  }
 
   return (
     <div className="app">
       {activeTab === "chat" ? (
         <>
-          <Chat onAfterAction={refreshStats} />
+          <Chat onAfterAction={refreshStats} onLogout={handleLogout} />
           <div className="floating-menu">
             <button
               className="menu-btn teach-btn"

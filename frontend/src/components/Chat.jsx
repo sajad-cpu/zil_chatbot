@@ -1,28 +1,43 @@
 import { useEffect, useRef, useState } from "react";
-import { sendChat } from "../api.js";
+import {
+  sendChat,
+  listConversations,
+  createConversation,
+  getConversation,
+  deleteConversation,
+} from "../api.js";
 import ChatSidebar from "./ChatSidebar.jsx";
 
-export default function Chat({ onAfterAction }) {
+export default function Chat({ onAfterAction, onLogout }) {
   const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loadingConversations, setLoadingConversations] = useState(true);
   const scrollRef = useRef(null);
 
-  // Load conversations from localStorage on mount
+  // Load conversations from API on mount
   useEffect(() => {
-    const saved = localStorage.getItem("zil_conversations");
-    if (saved) {
-      const convs = JSON.parse(saved);
-      setConversations(convs);
-      if (convs.length > 0 && !currentConversationId) {
-        const latest = convs[0];
-        setCurrentConversationId(latest.id);
-        setMessages(latest.messages);
+    async function loadConversations() {
+      try {
+        setLoadingConversations(true);
+        const convs = await listConversations();
+        setConversations(convs);
+        if (convs.length > 0 && !currentConversationId) {
+          const latest = convs[0];
+          setCurrentConversationId(latest.id);
+          await selectConversation(latest.id);
+        }
+      } catch (err) {
+        console.error("Failed to load conversations:", err);
+      } finally {
+        setLoadingConversations(false);
       }
     }
+
+    loadConversations();
   }, []);
 
   // Auto-scroll on new messages
@@ -32,95 +47,92 @@ export default function Chat({ onAfterAction }) {
     }
   }, [messages, loading]);
 
-  // Save conversations to localStorage whenever they change
-  useEffect(() => {
-    if (conversations.length > 0 || currentConversationId) {
-      localStorage.setItem("zil_conversations", JSON.stringify(conversations));
-    }
-  }, [conversations]);
+  async function createNewConversation() {
+    try {
+      const now = new Date();
+      const title = `Chat ${now.toLocaleDateString()}`;
+      const newConv = await createConversation(title);
 
-  function createNewConversation() {
-    const id = `conv_${Date.now()}`;
-    const now = new Date();
-    const title = `Chat ${now.toLocaleDateString()}`;
-
-    const newConv = {
-      id,
-      title,
-      messages: [],
-      createdAt: now.toISOString(),
-    };
-
-    setConversations([newConv, ...conversations]);
-    setCurrentConversationId(id);
-    setMessages([]);
-    setError("");
-    setInput("");
-  }
-
-  function selectConversation(id) {
-    const conv = conversations.find((c) => c.id === id);
-    if (conv) {
-      setCurrentConversationId(id);
-      setMessages(conv.messages);
-      setError("");
-    }
-  }
-
-  function deleteConversation(id) {
-    const updated = conversations.filter((c) => c.id !== id);
-    setConversations(updated);
-
-    if (currentConversationId === id) {
-      if (updated.length > 0) {
-        selectConversation(updated[0].id);
-      } else {
-        createNewConversation();
-      }
-    }
-  }
-
-  function clearAllHistory() {
-    if (confirm("Are you sure? This will delete all conversations.")) {
-      setConversations([]);
-      setCurrentConversationId(null);
+      setConversations([newConv, ...conversations]);
+      setCurrentConversationId(newConv.id);
       setMessages([]);
       setError("");
-      localStorage.removeItem("zil_conversations");
+      setInput("");
+    } catch (err) {
+      setError(err.message);
     }
   }
 
-  function updateCurrentConversation(newMessages) {
-    const updated = conversations.map((c) => {
-      if (c.id === currentConversationId) {
-        return { ...c, messages: newMessages };
+  async function selectConversation(id) {
+    try {
+      const conv = await getConversation(id);
+      setCurrentConversationId(id);
+      setMessages(
+        conv.messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }))
+      );
+      setError("");
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function handleDeleteConversation(id) {
+    try {
+      await deleteConversation(id);
+      const updated = conversations.filter((c) => c.id !== id);
+      setConversations(updated);
+
+      if (currentConversationId === id) {
+        if (updated.length > 0) {
+          await selectConversation(updated[0].id);
+        } else {
+          await createNewConversation();
+        }
       }
-      return c;
-    });
-    setConversations(updated);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function clearAllHistory() {
+    if (confirm("Are you sure? This will delete all conversations.")) {
+      try {
+        // Delete all conversations
+        for (const conv of conversations) {
+          await deleteConversation(conv.id);
+        }
+        setConversations([]);
+        setCurrentConversationId(null);
+        setMessages([]);
+        setError("");
+      } catch (err) {
+        setError(err.message);
+      }
+    }
   }
 
   async function handleSend(e) {
     e?.preventDefault();
     const text = input.trim();
-    if (!text || loading) return;
+    if (!text || loading || !currentConversationId) return;
 
     setError("");
     const userMsg = { role: "user", content: text };
     const next = [...messages, userMsg];
     setMessages(next);
-    updateCurrentConversation(next);
     setInput("");
     setLoading(true);
 
     try {
-      const res = await sendChat(text, messages);
+      const res = await sendChat(text, currentConversationId, messages);
       const updated = [
         ...next,
         { role: "assistant", content: res.answer, sources: res.sources },
       ];
       setMessages(updated);
-      updateCurrentConversation(updated);
     } catch (err) {
       setError(err.message);
       const errMsg = [
@@ -128,7 +140,6 @@ export default function Chat({ onAfterAction }) {
         { role: "assistant", content: `⚠️ ${err.message}`, error: true },
       ];
       setMessages(errMsg);
-      updateCurrentConversation(errMsg);
     } finally {
       setLoading(false);
     }
@@ -136,10 +147,10 @@ export default function Chat({ onAfterAction }) {
 
   // Initialize with first conversation if none exists
   useEffect(() => {
-    if (conversations.length === 0 && !currentConversationId) {
+    if (!loadingConversations && conversations.length === 0 && !currentConversationId) {
       createNewConversation();
     }
-  }, [conversations.length, currentConversationId]);
+  }, [loadingConversations, conversations.length, currentConversationId]);
 
   const currentTitle =
     conversations.find((c) => c.id === currentConversationId)?.title ||
@@ -152,8 +163,9 @@ export default function Chat({ onAfterAction }) {
         currentConversationId={currentConversationId}
         onNewChat={createNewConversation}
         onSelectConversation={selectConversation}
-        onDeleteConversation={deleteConversation}
+        onDeleteConversation={handleDeleteConversation}
         onClearAllHistory={clearAllHistory}
+        onLogout={onLogout}
       />
 
       <section className="chat">

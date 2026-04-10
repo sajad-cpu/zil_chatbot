@@ -7,6 +7,7 @@ export default function ChatSidebar({
   onSelectConversation,
   onDeleteConversation,
   onClearAllHistory,
+  onLogout,
 }) {
   const [isOpen, setIsOpen] = useState(true);
 
@@ -67,6 +68,13 @@ export default function ChatSidebar({
               disabled={conversations.length === 0}
             >
               Clear all history
+            </button>
+            <button
+              className="logout-btn"
+              onClick={onLogout}
+              title="Sign out"
+            >
+              Sign Out
             </button>
           </div>
         </>
