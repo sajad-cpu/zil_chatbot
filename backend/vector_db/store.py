@@ -76,7 +76,7 @@ async def add(entries: List[Dict]) -> int:
 
 async def search(query_embedding: List[float], k: int = 4) -> List[Dict]:
     """Return the top-k most similar items as ``[{"text", "score"}]``."""
-    pool = await _get_pool()
+    pool = await get_pool()
 
     async with pool.acquire() as conn:
         # Cosine similarity search using pgvector's <=> operator
@@ -96,7 +96,7 @@ async def search(query_embedding: List[float], k: int = 4) -> List[Dict]:
 
 async def count() -> int:
     """Return the total number of chunks."""
-    pool = await _get_pool()
+    pool = await get_pool()
 
     async with pool.acquire() as conn:
         # Check if table exists first
@@ -116,7 +116,7 @@ async def count() -> int:
 
 async def clear() -> None:
     """Wipe the entire store."""
-    pool = await _get_pool()
+    pool = await get_pool()
 
     async with pool.acquire() as conn:
         await conn.execute("DELETE FROM rag_chunks")
