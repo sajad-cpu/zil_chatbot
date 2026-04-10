@@ -4,7 +4,7 @@ import Teach from "./components/Teach.jsx";
 import { getStats } from "./api.js";
 
 export default function App() {
-  const [tab, setTab] = useState("chat");
+  const [activeTab, setActiveTab] = useState("chat");
   const [stats, setStats] = useState({ totalChunks: 0 });
 
   async function refreshStats() {
@@ -22,38 +22,33 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="header">
-        <h1>RAG Chatbot</h1>
-        <div className="meta">
-          <span className="badge">{stats.totalChunks} chunks</span>
-          <nav className="tabs">
-            <button
-              className={tab === "chat" ? "tab active" : "tab"}
-              onClick={() => setTab("chat")}
-            >
-              Chat
-            </button>
-            <button
-              className={tab === "teach" ? "tab active" : "tab"}
-              onClick={() => setTab("teach")}
-            >
-              Teach
-            </button>
-          </nav>
-        </div>
-      </header>
-
-      <main className="main">
-        {tab === "chat" ? (
+      {activeTab === "chat" ? (
+        <>
           <Chat onAfterAction={refreshStats} />
-        ) : (
-          <Teach onAfterAction={refreshStats} />
-        )}
-      </main>
-
-      <footer className="footer">
-        Powered by Gemini · grounded answers only
-      </footer>
+          <div className="floating-menu">
+            <button
+              className="menu-btn teach-btn"
+              onClick={() => setActiveTab("teach")}
+              title="Teach the bot (add knowledge)"
+            >
+              📚 Teach
+            </button>
+            <div className="stats-badge">{stats.totalChunks} chunks</div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="teach-wrapper">
+            <button
+              className="back-btn"
+              onClick={() => setActiveTab("chat")}
+            >
+              ← Back to Chat
+            </button>
+            <Teach onAfterAction={refreshStats} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
