@@ -35,6 +35,100 @@ html, body, #root {
   position: relative;
 }
 
+.clinic-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(108, 140, 255, 0.18), transparent 34%),
+    linear-gradient(180deg, #0b0e13 0%, #121722 100%);
+  padding: 24px;
+}
+
+.clinic-shell {
+  width: min(1280px, 100%);
+  height: calc(100vh - 48px);
+  margin: 0 auto;
+  border: 1px solid rgba(138, 163, 255, 0.18);
+  border-radius: 24px;
+  background: rgba(15, 17, 21, 0.92);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.clinic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 24px 28px;
+  border-bottom: 1px solid rgba(138, 163, 255, 0.14);
+}
+
+.clinic-eyebrow {
+  margin: 0 0 8px;
+  color: #93d7c7;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.clinic-header h1 {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.05;
+}
+
+.clinic-subtitle {
+  margin: 10px 0 0;
+  max-width: 640px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.clinic-back-link {
+  border: 1px solid rgba(138, 163, 255, 0.3);
+  border-radius: 999px;
+  color: var(--text);
+  text-decoration: none;
+  padding: 10px 16px;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.clinic-back-link:hover {
+  background: rgba(108, 140, 255, 0.12);
+  border-color: rgba(138, 163, 255, 0.6);
+}
+
+.clinic-frame {
+  width: 100%;
+  flex: 1;
+  border: 0;
+  background: #ffffff;
+}
+
+.clinic-empty-state {
+  margin: auto;
+  width: min(640px, calc(100% - 48px));
+  padding: 28px;
+  border: 1px solid rgba(138, 163, 255, 0.16);
+  border-radius: 20px;
+  background: rgba(31, 35, 44, 0.72);
+}
+
+.clinic-empty-state h2 {
+  margin-top: 0;
+}
+
+.clinic-empty-state p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.clinic-empty-state code {
+  color: #c8d2ff;
+}
+
 /* ── Sidebar ────────────────────────────────────── */
 .sidebar {
   width: 260px;

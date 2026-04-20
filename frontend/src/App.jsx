@@ -2,16 +2,32 @@ import { useEffect, useState } from "react";
 import Chat from "./components/Chat.jsx";
 import Teach from "./components/Teach.jsx";
 import AuthPage from "./components/AuthPage.jsx";
+import ClinicAgent from "./components/ClinicAgent.jsx";
 import { getStats, getCurrentUser } from "./api.js";
 
 export default function App() {
+  const [pathname, setPathname] = useState(window.location.pathname);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [activeTab, setActiveTab] = useState("chat");
   const [stats, setStats] = useState({ totalChunks: 0 });
 
+  useEffect(() => {
+    function handlePopState() {
+      setPathname(window.location.pathname);
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
   // Validate stored token on mount
   useEffect(() => {
+    if (pathname === "/clinic-ai") {
+      setIsCheckingAuth(false);
+      return;
+    }
+
     async function validateToken() {
       const token = localStorage.getItem("auth_token");
       if (!token) {
@@ -33,7 +49,11 @@ export default function App() {
     }
 
     validateToken();
-  }, []);
+  }, [pathname]);
+
+  if (pathname === "/clinic-ai") {
+    return <ClinicAgent />;
+  }
 
   async function refreshStats() {
     try {
