@@ -23,11 +23,14 @@ from routes.train import router as train_router  # noqa: E402
 
 app = FastAPI(title="RAG Chatbot", version="1.0.0")
 
-# CORS: allow explicit frontend origin with credentials
+# CORS: allow frontend origins (comma-separated) + always allow localhost for dev
 frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+origins = [u.strip() for u in frontend_url.split(",") if u.strip()]
+if "http://localhost:5173" not in origins:
+    origins.append("http://localhost:5173")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
