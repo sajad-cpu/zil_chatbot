@@ -23,11 +23,6 @@ export default function App() {
 
   // Validate stored token on mount
   useEffect(() => {
-    if (pathname === "/clinic-ai") {
-      setIsCheckingAuth(false);
-      return;
-    }
-
     async function validateToken() {
       const token = localStorage.getItem("auth_token");
       if (!token) {
@@ -90,6 +85,13 @@ export default function App() {
         <>
           <Chat onAfterAction={refreshStats} onLogout={handleLogout} />
           <div className="floating-menu">
+            <a
+              className="menu-btn clinic-nav-btn"
+              href="/clinic-ai"
+              title="Open Clinic AI assistant"
+            >
+              Clinic AI
+            </a>
             <button
               className="menu-btn teach-btn"
               onClick={() => setActiveTab("teach")}

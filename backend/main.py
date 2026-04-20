@@ -18,6 +18,7 @@ load_dotenv()
 from db.migrations import init_db  # noqa: E402
 from routes.auth import router as auth_router  # noqa: E402
 from routes.chat import router as chat_router  # noqa: E402
+from routes.clinic import router as clinic_router  # noqa: E402
 from routes.conversations import router as conversations_router  # noqa: E402
 from routes.train import router as train_router  # noqa: E402
 
@@ -46,6 +47,7 @@ app.include_router(auth_router)
 app.include_router(conversations_router)
 app.include_router(train_router)
 app.include_router(chat_router)
+app.include_router(clinic_router)
 
 
 @app.on_event("startup")

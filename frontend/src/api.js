@@ -102,3 +102,16 @@ export function sendChat(message, conversationId, history = []) {
     body: JSON.stringify({ message, conversation_id: conversationId, history }),
   });
 }
+
+export function createClinicSession() {
+  return request("/clinic/session", {
+    method: "POST",
+  });
+}
+
+export function sendClinicMessage(message, sessionId = null) {
+  return request("/clinic/message", {
+    method: "POST",
+    body: JSON.stringify({ message, session_id: sessionId }),
+  });
+}
