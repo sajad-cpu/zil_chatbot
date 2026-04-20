@@ -107,6 +107,26 @@ html, body, #root {
   background: #ffffff;
 }
 
+.clinic-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(138, 163, 255, 0.1);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.clinic-meta a {
+  color: #a9b9ff;
+  text-decoration: none;
+}
+
+.clinic-meta a:hover {
+  text-decoration: underline;
+}
+
 .clinic-empty-state {
   margin: auto;
   width: min(640px, calc(100% - 48px));
