@@ -27,7 +27,7 @@ class ClinicMessageRequest(BaseModel):
 async def new_clinic_session(
     user_id: Annotated[str, Depends(get_current_user)],
 ) -> ClinicSessionResponse:
-    session_id, state = create_session(user_id)
+    session_id, state = await create_session(user_id)
     return ClinicSessionResponse(session_id=session_id, state=state)
 
 
@@ -36,5 +36,5 @@ async def clinic_message(
     req: ClinicMessageRequest,
     user_id: Annotated[str, Depends(get_current_user)],
 ) -> ClinicSessionResponse:
-    session_id, state = process_message(user_id, req.session_id, req.message)
+    session_id, state = await process_message(user_id, req.session_id, req.message)
     return ClinicSessionResponse(session_id=session_id, state=state)
