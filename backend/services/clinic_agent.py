@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from db.pool import get_pool
@@ -59,6 +59,11 @@ def _today_and_tomorrow() -> tuple[str, str]:
     today_dt = datetime.now()
     tomorrow_dt = today_dt + timedelta(days=1)
     return today_dt.strftime("%Y-%m-%d"), tomorrow_dt.strftime("%Y-%m-%d")
+
+
+def _parse_appointment_date(value: str) -> date:
+    """Convert YYYY-MM-DD string to a Python date for asyncpg DATE columns."""
+    return datetime.strptime(value, "%Y-%m-%d").date()
 
 
 def _generate_time_slots(office_timing: str) -> list[str]:
@@ -187,7 +192,7 @@ async def _get_booked_times(doctor_id: str, appointment_date: str) -> set[str]:
               AND status = 'Confirmed'
             """,
             doctor_id,
-            appointment_date,
+            _parse_appointment_date(appointment_date),
         )
     return {row["appointment_time"] for row in rows}
 
@@ -250,7 +255,7 @@ async def _confirm_booking(
             booking_id,
             doctor_id,
             customer_id,
-            appointment_date,
+            _parse_appointment_date(appointment_date),
             _parse_time_slot(time_slot),
         )
     return booking_id
