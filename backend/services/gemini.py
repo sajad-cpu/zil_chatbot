@@ -33,7 +33,7 @@ def _embed_model() -> str:
 
 
 def _chat_model() -> str:
-    return os.environ.get("GEMINI_CHAT_MODEL", "gemini-2.0-flash")
+    return os.environ.get("GEMINI_CHAT_MODEL", "gemini-2.0-flash-lite")
 
 
 async def embed_text(text: str) -> List[float]:
