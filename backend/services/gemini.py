@@ -1,7 +1,7 @@
-"""Async wrapper around AI APIs.
+"""Async wrapper around the Gemini REST API.
 
-Embeddings: Gemini REST API (for vector search).
-Answer generation: ZilRouter (OpenAI-compatible chat completions API).
+Embeddings: gemini-embedding-001 (for vector search).
+Answer generation: gemini-2.0-flash (for RAG responses).
 
 Uses ``httpx.AsyncClient`` so FastAPI handlers can ``await`` calls without
 blocking the event loop. No SDK dependency — just plain HTTP.
@@ -14,11 +14,7 @@ from typing import List
 
 import httpx
 
-# Gemini config (embeddings only)
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
-
-# ZilRouter config (answer generation)
-ZILROUTER_BASE_URL = os.environ.get("ZILROUTER_URL", "https://zilrouter.ngrok.app")
 _TIMEOUT = httpx.Timeout(60.0, connect=10.0)
 
 
@@ -32,15 +28,12 @@ def _gemini_api_key() -> str:
     return key
 
 
-def _zilrouter_api_key() -> str:
-    key = os.environ.get("ZILROUTER_API_KEY")
-    if not key:
-        raise RuntimeError("ZILROUTER_API_KEY is not set in .env")
-    return key
-
-
 def _embed_model() -> str:
     return os.environ.get("GEMINI_EMBED_MODEL", "gemini-embedding-001")
+
+
+def _chat_model() -> str:
+    return os.environ.get("GEMINI_CHAT_MODEL", "gemini-2.0-flash")
 
 
 async def embed_text(text: str) -> List[float]:
@@ -74,28 +67,23 @@ async def embed_batch(texts: List[str]) -> List[List[float]]:
 
 
 async def generate_answer(prompt: str) -> str:
-    """Call ZilRouter chat completions API with a fully constructed RAG prompt."""
-    url = f"{ZILROUTER_BASE_URL}/api/v1/chat/completions"
+    """Call Gemini generateContent API with a fully constructed RAG prompt."""
+    model = _chat_model()
+    url = f"{GEMINI_BASE_URL}/models/{model}:generateContent?key={_gemini_api_key()}"
     payload = {
-        "messages": [
-            {"role": "user", "content": prompt},
-        ],
-    }
-    headers = {
-        "Authorization": f"Bearer {_zilrouter_api_key()}",
-        "Content-Type": "application/json",
+        "contents": [{"parts": [{"text": prompt}]}],
     }
 
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-        res = await client.post(url, json=payload, headers=headers)
+        res = await client.post(url, json=payload)
 
     if res.status_code != 200:
-        raise RuntimeError(f"ZilRouter generate failed ({res.status_code}): {res.text}")
+        raise RuntimeError(f"Gemini generate failed ({res.status_code}): {res.text}")
 
     data = res.json()
     try:
-        text = data["choices"][0]["message"]["content"]
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
     except (KeyError, IndexError, TypeError) as exc:
-        raise RuntimeError(f"ZilRouter response missing content: {data}") from exc
+        raise RuntimeError(f"Gemini response missing content: {data}") from exc
 
     return text.strip()
