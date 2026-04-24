@@ -1,7 +1,7 @@
-"""Async wrapper around the Gemini REST API.
+"""Async wrapper around AI APIs.
 
-Embeddings: gemini-embedding-001 (for vector search).
-Answer generation: gemini-2.0-flash (for RAG responses).
+Embeddings: Gemini REST API (gemini-embedding-001).
+Answer generation: Groq API (llama-3.1-8b-instant) — free tier, OpenAI-compatible.
 
 Uses ``httpx.AsyncClient`` so FastAPI handlers can ``await`` calls without
 blocking the event loop. No SDK dependency — just plain HTTP.
@@ -15,6 +15,7 @@ from typing import List
 import httpx
 
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 _TIMEOUT = httpx.Timeout(60.0, connect=10.0)
 
 
@@ -28,12 +29,21 @@ def _gemini_api_key() -> str:
     return key
 
 
+def _groq_api_key() -> str:
+    key = os.environ.get("GROQ_API_KEY")
+    if not key:
+        raise RuntimeError(
+            "GROQ_API_KEY is not set. Get a free key at https://console.groq.com"
+        )
+    return key
+
+
 def _embed_model() -> str:
     return os.environ.get("GEMINI_EMBED_MODEL", "gemini-embedding-001")
 
 
 def _chat_model() -> str:
-    return os.environ.get("GEMINI_CHAT_MODEL", "gemini-2.0-flash-lite")
+    return os.environ.get("GROQ_CHAT_MODEL", "llama-3.1-8b-instant")
 
 
 async def embed_text(text: str) -> List[float]:
@@ -67,23 +77,28 @@ async def embed_batch(texts: List[str]) -> List[List[float]]:
 
 
 async def generate_answer(prompt: str) -> str:
-    """Call Gemini generateContent API with a fully constructed RAG prompt."""
+    """Call Groq chat completions API with a fully constructed RAG prompt."""
     model = _chat_model()
-    url = f"{GEMINI_BASE_URL}/models/{model}:generateContent?key={_gemini_api_key()}"
+    url = f"{GROQ_BASE_URL}/chat/completions"
     payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    headers = {
+        "Authorization": f"Bearer {_groq_api_key()}",
+        "Content-Type": "application/json",
     }
 
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-        res = await client.post(url, json=payload)
+        res = await client.post(url, json=payload, headers=headers)
 
     if res.status_code != 200:
-        raise RuntimeError(f"Gemini generate failed ({res.status_code}): {res.text}")
+        raise RuntimeError(f"Groq generate failed ({res.status_code}): {res.text}")
 
     data = res.json()
     try:
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
+        text = data["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError) as exc:
-        raise RuntimeError(f"Gemini response missing content: {data}") from exc
+        raise RuntimeError(f"Groq response missing content: {data}") from exc
 
     return text.strip()
